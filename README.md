@@ -1,15 +1,15 @@
 # 🔬 Papers With Code: Advanced AI Research Implementations
 
-A curated collection of production-grade, interactive implementations of state-of-the-art AI and Agentic research papers. Every project is built **100% locally with zero Docker requirements**, featuring rich visual user interfaces, automated verification test suites, and local LLM integrations (Ollama / Qwen / Gemma).
+A curated collection of production-grade, interactive implementations of state-of-the-art AI, Agentic Systems, and Scientific Intelligence research papers. Every project is built **100% locally with zero Docker requirements**, featuring rich visual user interfaces, automated verification test suites, and local LLM integrations (Ollama / Qwen / Gemma).
 
 ---
 
 ## 📂 Projects Catalog
 
-| # | Project Name | Paper Title & Reference | Key Innovations | Tech Stack | Status |
-|---|--------------|-------------------------|-----------------|------------|--------|
-| **01** | [**⏳ Agent Time Machine**](agent-time-machine/) | *"Agentic Transaction: Towards ACID-Compliant Agent Systems"* (Sun et al., Tsinghua / arXiv:2608.13900) | **ACID Guarantees for AI Agents**: Write-Ahead Logging (WAL), LIFO Saga Rollback, Point-in-Time Checkpointing, Semantic Invariant Guards | FastAPI, Vue 3, Local Ollama (`qwen2.5:7b`), Cyber-Obsidian UI | ✅ Complete (12/12 Tests Passing) |
-| **02** | [**🗺️ ResearchAtlas**](ResearchAtlas/) | *"Autonomous Research Field Cartographer & Cross-Paper Synthesizer"* (ArXiv + Semantic Scholar + MiniLM Cross-Encoder) | **Field Cartography in 1 Search**: Multi-query arXiv retrieval, Cross-Encoder deep token reranking, structured dossiers, evolutionary DAGs, scientific tension matrix, reading roadmap | FastAPI, Next.js 14, Tailwind, Cross-Encoder (`ms-marco-MiniLM`), SSE Telemetry | ✅ Complete (9/9 Tests Passing) |
+| # | Project Name | Paper Title & Reference | Key Innovations | Tech Stack | Repository | Status |
+|---|--------------|-------------------------|-----------------|------------|------------|--------|
+| **01** | [**⏳ Agent Time Machine**](agent-time-machine/) | *"Agentic Transaction: Towards ACID-Compliant Agent Systems"* (Sun et al., Tsinghua / arXiv:2608.13900) | **ACID Guarantees for AI Agents**: Write-Ahead Logging (WAL), LIFO Saga Compensating Rollback, Point-in-Time Checkpointing, Semantic Invariant Guards | FastAPI, Vue 3, Local Ollama (`qwen2.5:7b`), Cyber-Obsidian UI | [Monorepo](agent-time-machine/) | ✅ Complete (12/12 Tests Passing) |
+| **02** | **🗺️ ResearchAtlas** | *"Autonomous Research Field Cartographer & Multi-Signal Cross-Paper Synthesizer"* | **Field Cartography in 1 Search**: Multi-query arXiv crawler, Two-Stage Multi-Signal Reranker (BM25 + Cross-Encoder + Citation RRF), Structured Dossiers, Evolutionary DAG, Field Saturation Gauges, TinyDB NoSQL Store | FastAPI, Next.js 14, TinyDB, SentenceTransformers, Apple Silicon Metal | [Private Repo](https://github.com/simranjeet97/ResearchAtlas) | 🔒 Private Repository |
 
 ---
 
@@ -46,8 +46,8 @@ Open **[http://localhost:8000](http://localhost:8000)** in your browser!
 
 ## 🛠️ Repository Guidelines
 
-Each subfolder in this repository represents an independent implementation of an AI research paper with:
-- Dedicated runnable startup script (`./run.sh`).
+Each project in this portfolio represents a rigorous implementation of an AI research paper with:
+- Dedicated single-command startup script (`./run.sh`).
 - Independent virtual environment and test suite (`pytest`).
 - Standalone documentation (`README.md`) with mathematical foundations, architecture diagrams, and paper citations.
 - Modern visual frontend adhering to [`VoltAgent/awesome-design-md`](https://github.com/voltagent/awesome-design-md) design guidelines.
