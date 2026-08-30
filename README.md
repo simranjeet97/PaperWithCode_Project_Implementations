@@ -9,6 +9,7 @@ A curated collection of production-grade, interactive implementations of state-o
 | # | Project Name | Paper Title & Reference | Key Innovations | Tech Stack | Status |
 |---|--------------|-------------------------|-----------------|------------|--------|
 | **01** | [**⏳ Agent Time Machine**](agent-time-machine/) | *"Agentic Transaction: Towards ACID-Compliant Agent Systems"* (Sun et al., Tsinghua / arXiv:2608.13900) | **ACID Guarantees for AI Agents**: Write-Ahead Logging (WAL), LIFO Saga Rollback, Point-in-Time Checkpointing, Semantic Invariant Guards | FastAPI, Vue 3, Local Ollama (`qwen2.5:7b`), Cyber-Obsidian UI | ✅ Complete (12/12 Tests Passing) |
+| **02** | [**🗺️ ResearchAtlas**](ResearchAtlas/) | *"Autonomous Research Field Cartographer & Cross-Paper Synthesizer"* (ArXiv + Semantic Scholar + MiniLM Cross-Encoder) | **Field Cartography in 1 Search**: Multi-query arXiv retrieval, Cross-Encoder deep token reranking, structured dossiers, evolutionary DAGs, scientific tension matrix, reading roadmap | FastAPI, Next.js 14, Tailwind, Cross-Encoder (`ms-marco-MiniLM`), SSE Telemetry | ✅ Complete (9/9 Tests Passing) |
 
 ---
 

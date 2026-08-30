@@ -1,21 +1,21 @@
 # Dependencies
 node_modules/
-**/node_modules/
+frontend/node_modules/
 venv/
-**/venv/
+backend/venv/
 .venv/
 env/
 
 # Production Builds
 .next/
-**/.next/
+frontend/.next/
 out/
+frontend/out/
 build/
 dist/
 
 # Python Cache & Artifacts
 __pycache__/
-**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -40,7 +40,7 @@ research_atlas_store.json
 .env.test.local
 .env.production.local
 
-# OS & IDE
+# IDE & OS
 .DS_Store
 .vscode/
 .idea/
