@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Time Machine | ACID-Compliant Visual Rollback Platform</title>
+  <meta name="description" content="ACID-compliant Agent Execution & Visual Rollback Platform with Time Machine Scrubber and Saga Compensation">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue.js 3 Production CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Custom Stylesheet & Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="bg-[#060913] text-slate-100 antialiased selection:bg-cyan-500 selection:text-black">
+  <div id="app" class="min-h-screen flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto gap-5 relative z-10">
+
+    <!-- AMBIENT GLOW BACKDROP -->
+    <div class="ambient-bg-glow"
+         :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'ambient-rollback' : 'ambient-live'">
+    </div>
+
+    <!-- TOP HEADER -->
+    <header class="glass-panel p-4 flex flex-wrap items-center justify-between gap-4 border border-slate-800/80">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-rose-500 p-0.5 shadow-lg shadow-cyan-500/25 flex items-center justify-center">
+          <div class="w-full h-full bg-slate-950/90 rounded-[10px] flex items-center justify-center">
+            <i data-lucide="history" class="w-6 h-6 text-cyan-400"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+              AGENT TIME MACHINE
+              <span class="text-xs px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-md font-mono font-semibold">v1.0</span>
+            </h1>
+            <span class="text-[11px] uppercase font-mono px-2.5 py-0.5 rounded-full font-bold shadow-sm"
+                  :class="statusBadgeClass">
+              {{ isTimeTravelMode ? '⏪ TIME-TRAVEL ACTIVE' : txStatus }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono mt-0.5">ACID-Compliant Agentic Transaction Engine • Tsinghua Paper arXiv:2608.13900</p>
+        </div>
+      </div>
+
+      <!-- VIEW SWITCHER (CLIENT CHAT VS TIME MACHINE INSPECTOR) -->
+      <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 font-mono text-xs shadow-inner">
+        <button @click="currentView = 'chat'"
+                class="px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-2 transition btn-action"
+                :class="currentView === 'chat' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-200'">
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+          <span>CLIENT ASSISTANT & PLANNER</span>
+        </button>
+        <button @click="currentView = 'inspector'"
+                class="px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-2 transition btn-action"
+                :class="currentView === 'inspector' ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30' : 'text-slate-400 hover:text-slate-200'">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span>TIME MACHINE INSPECTOR</span>
+        </button>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2.5">
+        <!-- Active Transaction ID -->
+        <div class="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 shadow-inner">
+          <span class="text-slate-500 font-medium">TX:</span>
+          <span class="text-cyan-300 font-bold">{{ currentTxId || 'Standby' }}</span>
+        </div>
+
+        <!-- LLM Selector -->
+        <div class="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+          <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
+          <span class="text-slate-400 font-mono">LLM:</span>
+          <select v-model="selectedModel" class="bg-transparent text-purple-300 font-mono font-semibold outline-none cursor-pointer">
+            <option v-for="m in availableModels" :key="m" :value="m" class="bg-slate-900 text-slate-200">{{ m }}</option>
+          </select>
+        </div>
+
+        <!-- Audio Haptics Toggle -->
+        <button @click="toggleAudio"
+                class="p-2 rounded-lg border text-xs font-mono transition flex items-center justify-center"
+                :class="audioEnabled ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300' : 'bg-slate-900 border-slate-800 text-slate-500'"
+                title="Toggle Sci-Fi Audio Synthesizer">
+          <i :data-lucide="audioEnabled ? 'volume-2' : 'volume-x'" class="w-4 h-4"></i>
+        </button>
+
+        <!-- WebSocket Badge -->
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono"
+             :class="wsConnected ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-slate-900 text-slate-400 border border-slate-800'">
+          <span class="w-2 h-2 rounded-full" :class="wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-cyan-400'"></span>
+          {{ wsConnected ? 'WS STREAMING' : 'WS READY' }}
+        </div>
+      </div>
+    </header>
+
+    <!-- VIEW 1: CLIENT ASSISTANT & PLANNER (CHAT INTERFACE) -->
+    <section v-if="currentView === 'chat'" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      
+      <!-- CHAT CONVERSATION STREAM (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+        <div class="glass-panel p-5 border border-slate-800 flex flex-col gap-4 min-h-[580px] justify-between">
+          
+          <!-- Chat Header -->
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                <i data-lucide="bot" class="w-4 h-4 text-indigo-400"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-slate-100">ACID Transactional AI Agent</h2>
+                <span class="text-[11px] text-slate-400 font-mono">Guaranteed Safe Execution • Auto-Rollback Enabled</span>
+              </div>
+            </div>
+            <button @click="resetChat" class="text-xs font-mono text-slate-400 hover:text-slate-200 px-2 py-1 rounded bg-slate-900 border border-slate-800">
+              Clear Chat
+            </button>
+          </div>
+
+          <!-- Message History -->
+          <div class="flex flex-col gap-4 overflow-y-auto max-h-[480px] pr-2">
+            
+            <!-- Welcome Message -->
+            <div class="flex items-start gap-3">
+              <div class="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300"></i>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800/80 p-3.5 rounded-2xl rounded-tl-none text-xs text-slate-200 leading-relaxed max-w-[85%]">
+                <p>Hello! I am your <strong>Transaction-Guaranteed AI Agent</strong>.</p>
+                <p class="mt-1 text-slate-300">Tell me what you'd like to do (e.g. <em>"Book my vacation to Hawaii for $1,000"</em> or <em>"Process refund for order #882"</em>). I will generate an execution plan with safety undo receipts before charging or mutating anything!</p>
+              </div>
+            </div>
+
+            <!-- Chat Messages List -->
+            <div v-for="(m, idx) in chatMessages" :key="idx" class="flex flex-col gap-2">
+              
+              <!-- User Message -->
+              <div v-if="m.role === 'user'" class="flex items-start justify-end gap-2.5">
+                <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none text-xs font-medium max-w-[80%] shadow-md shadow-indigo-600/20">
+                  {{ m.content }}
+                </div>
+              </div>
+
+              <!-- Assistant Message & Proposed Plan Card -->
+              <div v-else-if="m.role === 'assistant'" class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-300"></i>
+                </div>
+                <div class="flex flex-col gap-3 max-w-[90%]">
+                  <div class="bg-slate-900/90 border border-slate-800/80 p-3.5 rounded-2xl rounded-tl-none text-xs text-slate-200 leading-relaxed">
+                    {{ m.content }}
+                  </div>
+
+                  <!-- Plan Proposal Card -->
+                  <div v-if="m.plan" class="glass-panel p-4 border border-indigo-500/40 bg-slate-950/80 flex flex-col gap-3 shadow-lg shadow-indigo-950/50">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span class="font-bold text-xs text-indigo-300 font-mono">{{ m.plan.title }}</span>
+                      <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">
+                        Budget: ${{ m.plan.budget }}
+                      </span>
+                    </div>
+
+                    <p class="text-[11px] text-slate-300">{{ m.plan.summary }}</p>
+
+                    <!-- Plan Steps List -->
+                    <div class="flex flex-col gap-1.5 font-mono text-[11px]">
+                      <div v-for="step in m.plan.steps" :key="step.step_num" class="p-2 bg-slate-900/80 rounded border border-slate-800/80 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-300">{{ step.step_num }}</span>
+                          <span class="text-slate-200">{{ step.action }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <span class="text-cyan-400 font-bold" v-if="step.cost > 0">-${{ step.cost }}</span>
+                          <span class="text-slate-500 text-[10px]">Undo: {{ step.undo }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Safety Guarantee Alert -->
+                    <div class="p-2.5 rounded bg-emerald-950/30 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 flex items-start gap-2">
+                      <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
+                      <span><strong>ACID Guarantee:</strong> {{ m.plan.safety_guarantee }}</span>
+                    </div>
+
+                    <!-- Ollama Live Generation Proof & Trace Toggle -->
+                    <div v-if="m.llm_trace" class="flex flex-col gap-2 pt-1">
+                      <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                        <div class="flex items-center gap-1.5">
+                          <span class="w-2 h-2 rounded-full" :class="m.llm_trace.is_live_ollama ? 'bg-emerald-400 animate-pulse' : 'bg-purple-400'"></span>
+                          <span class="text-purple-300 font-bold">Ollama Model: {{ m.llm_trace.model_used }}</span>
+                          <span class="text-slate-500">({{ m.llm_trace.duration_ms }}ms | {{ m.llm_trace.tokens_eval }} tokens)</span>
+                        </div>
+                        <button @click="m.show_raw_trace = !m.show_raw_trace" class="text-cyan-400 hover:text-cyan-300 underline cursor-pointer">
+                          {{ m.show_raw_trace ? 'Hide Ollama Raw JSON ▲' : 'View Ollama Raw JSON ▼' }}
+                        </button>
+                      </div>
+
+                      <div v-if="m.show_raw_trace" class="p-3 bg-slate-950 rounded-lg border border-purple-500/40 flex flex-col gap-2 font-mono text-[10px]">
+                        <div>
+                          <span class="text-cyan-400 font-bold">1. Prompt Sent to Ollama (http://localhost:11434/api/generate):</span>
+                          <pre class="mt-1 p-2 bg-slate-900 rounded border border-slate-800 text-slate-300 overflow-x-auto whitespace-pre-wrap">{{ m.llm_trace.prompt_sent }}</pre>
+                        </div>
+                        <div>
+                          <span class="text-emerald-400 font-bold">2. Raw JSON Response from Ollama:</span>
+                          <pre class="mt-1 p-2 bg-slate-900 rounded border border-slate-800 text-emerald-300 overflow-x-auto whitespace-pre-wrap">{{ m.llm_trace.raw_response }}</pre>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Approval & Fault Simulation Options -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800 flex-wrap gap-2">
+                      <label class="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 cursor-pointer">
+                        <input type="checkbox" v-model="chatFaultSimulation" class="rounded accent-amber-500">
+                        <span>Simulate Step 4 Failure (Test Rollback)</span>
+                      </label>
+
+                      <button @click="approveAndExecutePlan(m.scenario_type)"
+                              :disabled="isRunning"
+                              class="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-mono text-xs font-bold rounded-lg transition btn-action flex items-center gap-1.5 shadow-lg shadow-emerald-600/30">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        APPROVE & EXECUTE TRANSACTION
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Prompt Chips & Input Box -->
+          <div class="flex flex-col gap-2.5 pt-2 border-t border-slate-800">
+            <!-- Preset Chips -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] font-mono">
+              <span class="text-slate-500 shrink-0">Try:</span>
+              <button @click="sendPresetMessage('🌴 Book my vacation to Hawaii ($1,000 budget: Hotel $400, Flight $500, Car $100)')"
+                      class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 shrink-0 transition">
+                🌴 Book Hawaii Vacation ($1k)
+              </button>
+              <button @click="sendPresetMessage('🛒 Process refund and inventory restock for Order #ord_882 ($100.00)')"
+                      class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 shrink-0 transition">
+                🛒 Customer Return ($100)
+              </button>
+              <button @click="sendPresetMessage('⚡ Custom ledger debit ($150.00) & warehouse resource allocation')"
+                      class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 shrink-0 transition">
+                ⚡ Enterprise Ledger Debit
+              </button>
+            </div>
+
+            <!-- Input bar -->
+            <form @submit.prevent="submitChatMessage" class="flex items-center gap-2">
+              <input type="text" v-model="userChatInput" placeholder="Ask agent to plan a transaction (e.g. 'Book Hawaii trip for $1000')..."
+                     class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 outline-none focus:border-indigo-500/50 shadow-inner">
+              <button type="submit" :disabled="!userChatInput.trim() || isPlanning"
+                      class="p-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl transition btn-action flex items-center justify-center">
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LIVE EXECUTION & STATE PREVIEW CARD (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        
+        <!-- State Guarantee Transition Card -->
+        <div class="glass-panel p-5 border border-slate-800 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase font-mono text-slate-200 flex items-center gap-2">
+              <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+              CLIENT WALLET / LEDGER STATE
+            </span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded"
+                  :class="txStatus === 'ROLLED_BACK' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'">
+              {{ txStatus }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 font-mono text-center">
+            <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-1">
+              <span class="text-[9px] uppercase font-bold text-slate-400">Initial</span>
+              <span class="text-lg font-bold text-white">${{ heroMetrics.beforeBalance }}</span>
+            </div>
+            <div class="p-3 rounded-xl border flex flex-col gap-1"
+                 :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-900/90 border-slate-800'">
+              <span class="text-[9px] uppercase font-bold text-slate-400">Charged</span>
+              <span class="text-lg font-bold" :class="txStatus === 'ROLLED_BACK' ? 'text-rose-400 line-through' : 'text-cyan-300'">${{ heroMetrics.currentBalance }}</span>
+            </div>
+            <div class="p-3 rounded-xl border flex flex-col gap-1"
+                 :class="txStatus === 'ROLLED_BACK' ? 'bg-emerald-950/50 border-emerald-500/60 shadow-md shadow-emerald-500/20' : 'bg-slate-900/90 border-slate-800'">
+              <span class="text-[9px] uppercase font-bold" :class="txStatus === 'ROLLED_BACK' ? 'text-emerald-400' : 'text-slate-500'">Restored</span>
+              <span class="text-lg font-bold" :class="txStatus === 'ROLLED_BACK' ? 'text-emerald-400' : 'text-slate-500'">${{ heroMetrics.restoredBalance }}</span>
+            </div>
+          </div>
+
+          <div v-if="txStatus === 'ROLLED_BACK'" class="p-3 bg-rose-950/40 border border-rose-500/50 rounded-xl text-xs flex items-start gap-2.5">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+            <div class="text-[11px] text-slate-200 leading-relaxed">
+              <strong>100% Refunded & Intact:</strong> Step 4 timed out. The system automatically cancelled hotel and flight bookings, restoring your wallet to <strong>${{ heroMetrics.restoredBalance }}</strong>!
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Step Progress Mini DAG -->
+        <div class="glass-panel p-4 border border-slate-800 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold font-mono text-slate-200">TRANSACTION STEP PROGRESS</span>
+            <button @click="currentView = 'inspector'" class="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+              <span>Open Full Inspector</span>
+              <i data-lucide="external-link" class="w-3 h-3"></i>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div v-for="rec in displayedRecords" :key="rec.step_index" class="p-2.5 rounded-lg border bg-slate-900/70 border-slate-800 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono"
+                      :class="getStepIconBadgeClass(rec)">
+                  <span v-if="rec.status === 'COMMITTED'">✓</span>
+                  <span v-else-if="rec.status === 'FAILED'">✕</span>
+                  <span v-else-if="rec.status === 'COMPENSATING'">⏪</span>
+                  <span v-else-if="rec.status === 'COMPENSATED'">↺</span>
+                  <span v-else>{{ rec.step_index }}</span>
+                </span>
+                <span class="text-slate-200 font-medium text-[11px]">{{ rec.step_name }}</span>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded" :class="getStepStatusBadgeClass(rec)">
+                {{ rec.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- VIEW 2: TIME MACHINE INSPECTOR & DEEP DAG -->
+    <div v-show="currentView === 'inspector'" class="flex flex-col gap-5">
+      
+      <!-- Reverse Laser animation on rollback -->
+      <div v-if="txStatus === 'COMPENSATING'" class="rollback-laser-track"></div>
+
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center">
+            <i data-lucide="clock" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div>
+            <span class="text-xs uppercase tracking-wider font-extrabold text-slate-200 font-mono">TIMELINE SCRUBBER (Time-Travel Engine)</span>
+            <span class="text-[11px] text-slate-400 block font-mono">Drag to inspect world state at any step in history</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span v-if="isTimeTravelMode" class="text-xs px-2.5 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg font-mono font-bold animate-pulse">
+            Inspecting Snapshot t={{ currentScrubStep }}
+          </span>
+          <span v-else class="text-xs px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-400 rounded-lg font-mono">
+            Live Stream (t={{ maxStep }})
+          </span>
+
+          <button @click="scrubToStep(0)" class="px-2.5 py-1 text-xs font-mono bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg transition btn-action">
+            ⏮ Initial
+          </button>
+          <button @click="scrubToLive" class="px-2.5 py-1 text-xs font-mono bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/40 rounded-lg transition btn-action">
+            ▶▶ Live Head
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrubber Slider -->
+      <div class="relative py-2 flex items-center">
+        <input type="range" min="0" :max="maxStep || 4" v-model.number="currentScrubStep"
+               @input="onScrubInput"
+               class="scrubber-slider w-full cursor-pointer z-10">
+      </div>
+
+      <!-- Step Markers -->
+      <div class="flex justify-between text-[11px] font-mono text-slate-400 px-1">
+        <span class="cursor-pointer hover:text-cyan-400" @click="scrubToStep(0)">● t=0 (Baseline)</span>
+        <span v-for="step in (maxStep || 4)" :key="step" class="text-center cursor-pointer hover:text-cyan-400" @click="scrubToStep(step)">
+          ● Step {{ step }}
+        </span>
+        <span v-if="txStatus === 'ROLLED_BACK'" class="text-rose-400 font-bold cursor-pointer hover:text-rose-300" @click="scrubToStep(999)">
+          ● t=Rollback Restored
+        </span>
+      </div>
+    </section>
+
+    <!-- MAIN TWO-COLUMN DASHBOARD -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+      <!-- LEFT COLUMN: TRANSACTION DAG & ACTION PIPELINE (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        
+        <!-- Transaction Info & Invariants -->
+        <div class="glass-panel p-4 border border-slate-800 flex flex-col gap-3">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
+              <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400"></i>
+              TRANSACTION EXECUTION DAG
+            </h2>
+            <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">Atomicity: WAL</span>
+          </div>
+
+          <!-- Alert banner on rollback -->
+          <div v-if="txStatus === 'FAILED' || txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK'"
+               class="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/50 flex items-start gap-3 shadow-lg shadow-rose-950/50">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400 shrink-0 mt-0.5"></i>
+            <div class="text-xs">
+              <div class="font-bold text-rose-300 uppercase tracking-wide flex items-center gap-2">
+                <span>Transaction Invariant Triggered</span>
+                <span class="text-[10px] px-1.5 py-0.2 bg-rose-500/20 text-rose-200 rounded">ROLLBACK</span>
+              </div>
+              <div class="text-rose-200 mt-1 leading-relaxed">{{ failureReason || 'Step execution encountered error. LIFO rollback active.' }}</div>
+            </div>
+          </div>
+
+          <!-- Step Pipeline List -->
+          <div class="flex flex-col gap-2.5">
+            <div v-for="(rec, idx) in displayedRecords" :key="rec.record_id || idx"
+                 class="p-3.5 rounded-xl border transition-all duration-300 flex flex-col gap-2 relative overflow-hidden"
+                 :class="getStepCardClass(rec)">
+              
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-mono shadow-sm"
+                       :class="getStepIconBadgeClass(rec)">
+                    <span v-if="rec.status === 'COMMITTED'">✓</span>
+                    <span v-else-if="rec.status === 'FAILED'">✕</span>
+                    <span v-else-if="rec.status === 'COMPENSATING'">⏪</span>
+                    <span v-else-if="rec.status === 'COMPENSATED'">↺</span>
+                    <span v-else>{{ rec.step_index }}</span>
+                  </div>
+                  <div>
+                    <span class="text-sm font-semibold text-white block">{{ rec.step_name }}</span>
+                    <span class="text-[10px] font-mono text-slate-400">Action: {{ rec.action_type }}</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs font-mono">
+                  <span class="px-2.5 py-1 rounded-md text-[10px] font-bold"
+                        :class="getStepStatusBadgeClass(rec)">
+                    {{ rec.status }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Compensation details badge if compensable -->
+              <div v-if="rec.compensation" class="flex items-center justify-between text-[11px] font-mono bg-slate-950/70 p-2 rounded-lg border border-slate-800/80">
+                <div class="flex items-center gap-1.5 text-amber-400">
+                  <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+                  <span>{{ rec.compensation.action_name }}</span>
+                </div>
+                <span class="text-[10px] font-bold" :class="rec.compensation.executed ? 'text-emerald-400' : 'text-slate-500'">
+                  {{ rec.compensation.executed ? '✓ COMPENSATED' : 'SAGA READY' }}
+                </span>
+              </div>
+
+              <!-- Confidence metric -->
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/40">
+                <span>Grounding: $P_{LLM}$ Conf {{ (rec.confidence_score * 100).toFixed(0) }}%</span>
+                <span :class="rec.divergence_score < 0.25 ? 'text-rose-400 font-bold' : 'text-slate-400'">
+                  $\Delta_{\text{div}}$: {{ (rec.divergence_score).toFixed(2) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Agent Thought Stream -->
+        <div class="glass-panel p-4 border border-slate-800 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+              AGENT REASONING & PROVENANCE STREAM
+            </span>
+            <span class="text-[10px] font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded">{{ events.length }} events</span>
+          </div>
+
+          <div class="h-48 overflow-y-auto font-mono text-xs flex flex-col gap-1.5 pr-1 bg-slate-950/80 p-3 rounded-lg border border-slate-900">
+            <div v-for="(ev, i) in reversedEvents" :key="ev.event_id || i" class="text-slate-300 leading-relaxed border-b border-slate-900/80 pb-1.5">
+              <span class="text-cyan-400 font-semibold">[{{ formatTime(ev.timestamp) }}]</span>
+              <span class="font-bold ml-1.5" :class="getEventColorClass(ev.event_type)">{{ ev.event_type }}:</span>
+              <span class="text-slate-300 ml-1.5">{{ ev.message }}</span>
+            </div>
+            <div v-if="events.length === 0" class="text-slate-500 italic p-2">Ready. Select a scenario and launch execution below.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: STATE HERO & INSPECTOR (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+
+        <!-- LINKEDIN SHOWCASE STATE CARD: BEFORE -> CURRENT -> RESTORED -->
+        <div class="glass-panel p-5 border border-slate-800 flex flex-col gap-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-100 font-mono">
+                  STATE GUARANTEE: ATOMIC TRANSITION
+                </h2>
+                <span class="text-[10px] text-slate-400 font-mono">Verification across Customer Ledger & Inventory</span>
+              </div>
+            </div>
+            <span class="text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400">
+              ACID Semantic Invariants
+            </span>
+          </div>
+
+          <!-- Hero 3-Box Transition (Linear & Stripe aesthetic) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
+            
+            <!-- Before Card -->
+            <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-1.5 shadow-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider">1. BEFORE</span>
+                <span class="text-[10px] text-slate-500 font-bold">t=0</span>
+              </div>
+              <div class="text-2xl font-extrabold text-white mt-0.5">
+                ${{ heroMetrics.beforeBalance }}
+              </div>
+              <div class="text-xs text-slate-400 flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                <span>Stock: {{ heroMetrics.beforeStock }} units</span>
+                <span class="text-emerald-400 font-semibold">Baseline</span>
+              </div>
+            </div>
+
+            <!-- Mutated Card -->
+            <div class="p-4 rounded-xl border flex flex-col gap-1.5 transition-all shadow-sm"
+                 :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'bg-rose-950/40 border-rose-500/50' : 'bg-slate-900/90 border-slate-800'">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-extrabold tracking-wider"
+                      :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'text-rose-400' : 'text-cyan-400'">
+                  2. MUTATED
+                </span>
+                <span class="text-[10px] font-bold" :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'text-rose-400' : 'text-slate-500'">Step 3</span>
+              </div>
+              <div class="text-2xl font-extrabold mt-0.5"
+                   :class="txStatus === 'COMPENSATING' || txStatus === 'ROLLED_BACK' ? 'text-rose-400 line-through' : 'text-cyan-300'">
+                ${{ heroMetrics.currentBalance }}
+              </div>
+              <div class="text-xs text-slate-400 flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                <span>Stock: {{ heroMetrics.currentStock }} units</span>
+                <span class="text-rose-400 font-semibold" v-if="txStatus === 'COMPENSATING'">Compensating...</span>
+                <span class="text-cyan-400 font-semibold" v-else>Mutated</span>
+              </div>
+            </div>
+
+            <!-- Restored Card -->
+            <div class="p-4 rounded-xl border flex flex-col gap-1.5 transition-all shadow-md"
+                 :class="txStatus === 'ROLLED_BACK' ? 'bg-emerald-950/50 border-emerald-500/60 shadow-emerald-500/20' : 'bg-slate-900/90 border-slate-800'">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-extrabold tracking-wider"
+                      :class="txStatus === 'ROLLED_BACK' ? 'text-emerald-400' : 'text-slate-500'">
+                  3. RESTORED
+                </span>
+                <span class="text-[10px] font-bold text-emerald-400" v-if="txStatus === 'ROLLED_BACK'">LIFO Rollback</span>
+                <span class="text-[10px] text-slate-500" v-else>Pending</span>
+              </div>
+              <div class="text-2xl font-extrabold mt-0.5"
+                   :class="txStatus === 'ROLLED_BACK' ? 'text-emerald-400' : 'text-slate-500'">
+                ${{ heroMetrics.restoredBalance }}
+              </div>
+              <div class="text-xs flex items-center justify-between mt-2 pt-2 border-t border-slate-800"
+                   :class="txStatus === 'ROLLED_BACK' ? 'text-emerald-300' : 'text-slate-500'">
+                <span>Stock: {{ heroMetrics.restoredStock }} units</span>
+                <span class="font-extrabold text-emerald-400" v-if="txStatus === 'ROLLED_BACK'">✓ 100% INTACT</span>
+                <span v-else>Standby</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- STATE INSPECTOR TABS (Supabase Studio Style + LLM Trace) -->
+        <div class="glass-panel p-4 border border-slate-800 flex flex-col gap-3">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button v-for="tab in ['database', 'api', 'memory', 'files', 'llm']" :key="tab"
+                      @click="activeTab = tab"
+                      class="px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition btn-action flex items-center gap-1.5"
+                      :class="activeTab === tab ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200 bg-slate-900/60'">
+                <i v-if="tab === 'llm'" data-lucide="cpu" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>{{ tab === 'llm' ? '🤖 OLLAMA LLM TRACE' : tab.toUpperCase() }}</span>
+              </button>
+            </div>
+            <span class="text-[11px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
+              Snapshot @ {{ activeSnapshot?.step_name || 'Baseline t=0' }}
+            </span>
+          </div>
+
+          <!-- TAB 0: OLLAMA LLM PROMPT & OUTPUT TRACE -->
+          <div v-if="activeTab === 'llm'" class="font-mono text-xs flex flex-col gap-3">
+            <div class="p-3.5 bg-slate-950/90 rounded-xl border border-purple-500/40 flex flex-col gap-3 shadow-lg shadow-purple-950/30">
+              
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                    OLLAMA LLM INFERENCE
+                  </span>
+                  <span class="text-slate-200 font-bold text-xs">{{ currentLlmTrace.model_used || selectedModel }}</span>
+                </div>
+                <span class="text-cyan-400 text-[11px]">Duration: {{ currentLlmTrace.duration_ms || 320 }}ms</span>
+              </div>
+
+              <!-- Thought & Decision Banner -->
+              <div class="p-3 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5">
+                <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Agent Reasoning Chain:</span>
+                <p class="text-slate-200 leading-relaxed text-xs">{{ currentLlmTrace.thought || 'Agent evaluated transaction boundaries and invariant rules.' }}</p>
+                <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
+                  <span>Decision: <strong class="text-emerald-400">{{ currentLlmTrace.decision || 'proceed' }}</strong></span>
+                  <span>Confidence: <strong class="text-cyan-300">{{ ((currentLlmTrace.confidence || 0.95) * 100).toFixed(0) }}%</strong></span>
+                  <span>Tokens: <strong class="text-slate-300">{{ currentLlmTrace.tokens_eval || 64 }}</strong></span>
+                </div>
+              </div>
+
+              <!-- Input Prompt Sent to Ollama -->
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span class="font-bold text-cyan-400">INPUT: System Prompt & Context Sent to Ollama:</span>
+                  <span class="text-[10px] text-slate-500">POST http://localhost:11434/api/generate</span>
+                </div>
+                <pre class="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px] text-slate-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ currentLlmTrace.prompt_sent || 'System: You are an ACID-compliant transaction agent.\nTask: Execute step with safety invariants.' }}</pre>
+              </div>
+
+              <!-- Raw Response Output from Ollama -->
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span class="font-bold text-emerald-400">OUTPUT: Raw JSON Output from Ollama:</span>
+                  <span class="text-[10px] text-slate-500">status: 200 OK</span>
+                </div>
+                <pre class="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px] text-emerald-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ currentLlmTrace.raw_response || JSON.stringify(currentLlmTrace.parsed_json || { decision: 'proceed', thought: 'Invariant verified' }, null, 2) }}</pre>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 1: DATABASE TABLES -->
+          <div v-if="activeTab === 'database'" class="font-mono text-xs flex flex-col gap-3">
+            <div v-for="(tableData, tableName) in currentDbState" :key="tableName" class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-900 shadow-inner">
+              <div class="text-cyan-400 font-bold mb-2 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="database" class="w-3.5 h-3.5"></i>
+                  TABLE: {{ tableName }}
+                </span>
+                <span class="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{{ Object.keys(tableData).length }} rows</span>
+              </div>
+              <pre class="text-slate-300 overflow-x-auto p-2.5 bg-slate-900/90 rounded-lg text-[11px] border border-slate-800/80">{{ JSON.stringify(tableData, null, 2) }}</pre>
+            </div>
+          </div>
+
+          <!-- TAB 2: EXTERNAL API CALLS -->
+          <div v-if="activeTab === 'api'" class="font-mono text-xs flex flex-col gap-2">
+            <div v-for="(api, idx) in currentApiCalls" :key="idx" class="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex flex-col gap-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-emerald-400 font-bold flex items-center gap-1.5">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  {{ api.method }} {{ api.endpoint }}
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                      :class="api.status_code === 200 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'">
+                  HTTP {{ api.status_code }}
+                </span>
+              </div>
+              <div class="text-[10px] text-slate-400">Payload: {{ JSON.stringify(api.payload) }}</div>
+              <div class="text-[10px] text-slate-400">Response: {{ JSON.stringify(api.response) }}</div>
+            </div>
+            <div v-if="currentApiCalls.length === 0" class="text-slate-500 italic p-3">No external API side-effects recorded.</div>
+          </div>
+
+          <!-- TAB 3: KNOWLEDGE MEMORY GRAPH -->
+          <div v-if="activeTab === 'memory'" class="font-mono text-xs flex flex-col gap-2">
+            <div v-for="node in currentMemoryNodes" :key="node.id" class="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px] font-bold border border-purple-500/30">{{ node.type }}</span>
+                <span class="text-slate-200 font-medium">{{ node.label }}</span>
+              </div>
+              <span class="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{{ node.status }}</span>
+            </div>
+            <div v-if="currentMemoryNodes.length === 0" class="text-slate-500 italic p-3">No active memory nodes.</div>
+          </div>
+
+          <!-- TAB 4: WORKSPACE FILES (VFS) -->
+          <div v-if="activeTab === 'files'" class="font-mono text-xs flex flex-col gap-2">
+            <div v-for="(content, path) in currentFiles" :key="path" class="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex flex-col gap-1.5">
+              <span class="text-cyan-400 font-bold flex items-center gap-1.5">
+                <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                {{ path }}
+              </span>
+              <pre class="text-[10px] text-slate-300 bg-slate-900/90 p-2.5 rounded-lg overflow-x-auto border border-slate-800/80">{{ content }}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAULT INJECTION LAB & CONTROLS -->
+        <div class="glass-panel p-4 border border-slate-800 flex flex-col gap-3">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
+              <i data-lucide="flask-conical" class="w-4 h-4 text-amber-400"></i>
+              FAULT INJECTION LAB & DEMO CONTROLS
+            </h3>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">100% Local Run</span>
+          </div>
+
+          <!-- SCENARIOS GRID -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            
+            <!-- Scenario 1: E-Commerce Refund -->
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between gap-2.5 shadow-inner">
+              <div>
+                <div class="font-bold text-sm text-slate-200 flex items-center justify-between">
+                  <span>Scenario 1: Customer Refund</span>
+                  <span class="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">E-Commerce</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed mt-1">Read order → Restock inventory → Create refund → Crash step 4 → Rewind</p>
+                
+                <div class="flex items-center gap-2 mt-2">
+                  <label class="flex items-center gap-2 text-xs font-mono text-amber-300 cursor-pointer">
+                    <input type="checkbox" v-model="faultInjectionRefund" class="rounded accent-amber-500">
+                    <span>Simulate Step 4 504 Failure</span>
+                  </label>
+                </div>
+              </div>
+
+              <button @click="runScenario('ecommerce_refund', faultInjectionRefund)"
+                      :disabled="isRunning"
+                      class="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg font-mono flex items-center justify-center gap-2 transition btn-action shadow-lg shadow-indigo-600/25">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                RUN REFUND
+              </button>
+            </div>
+
+            <!-- Scenario 2: Research Paper Wollaston Lakehouse -->
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between gap-2.5 shadow-inner">
+              <div>
+                <div class="font-bold text-sm text-slate-200 flex items-center justify-between">
+                  <span>Scenario 2: Wollaston Lakehouse</span>
+                  <span class="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded font-mono">Benchmark</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed mt-1">Tsinghua Paper: Confidence-guided exploration & rollback of bad aggregation</p>
+                
+                <div class="flex items-center gap-2 mt-2">
+                  <label class="flex items-center gap-2 text-xs font-mono text-cyan-300 cursor-pointer">
+                    <input type="checkbox" v-model="faultInjectionWollaston" class="rounded accent-cyan-500">
+                    <span>Trigger Confidence Inconsistency</span>
+                  </label>
+                </div>
+              </div>
+
+              <button @click="runScenario('wollaston_lakehouse', faultInjectionWollaston)"
+                      :disabled="isRunning"
+                      class="w-full py-2.5 px-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg font-mono flex items-center justify-center gap-2 transition btn-action shadow-lg shadow-cyan-600/25">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                RUN WOLLASTON
+              </button>
+            </div>
+
+            <!-- Scenario 3: Custom Inputs Builder -->
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between gap-2.5 shadow-inner">
+              <div>
+                <div class="font-bold text-sm text-purple-300 flex items-center justify-between">
+                  <span>Custom Inputs Builder</span>
+                  <span class="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded font-mono">Your Data</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">Provide your own account balance, stock, and failure test</p>
+                
+                <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-xs">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block">Initial Balance ($):</label>
+                    <input type="number" v-model.number="customInitialBalance" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs outline-none">
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block">Debit / Mutate ($):</label>
+                    <input type="number" v-model.number="customMutationAmount" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-xs outline-none">
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2">
+                  <label class="flex items-center gap-1.5 text-[11px] font-mono text-purple-300 cursor-pointer">
+                    <input type="checkbox" v-model="customShouldFail" class="rounded accent-purple-500">
+                    <span>Fail on Step 4 (Test Rollback)</span>
+                  </label>
+                </div>
+              </div>
+
+              <button @click="runCustomTransaction"
+                      :disabled="isRunning"
+                      class="w-full py-2.5 px-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg font-mono flex items-center justify-center gap-2 transition btn-action shadow-lg shadow-purple-600/25">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                RUN CUSTOM TX
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Interactive Action Buttons -->
+          <div class="flex items-center justify-between pt-2.5 border-t border-slate-800/80 flex-wrap gap-2">
+            <button @click="triggerManualRollback"
+                    :disabled="!currentTxId || txStatus === 'ROLLED_BACK'"
+                    class="py-2 px-3.5 bg-rose-600/20 hover:bg-rose-600/40 disabled:opacity-30 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold rounded-lg transition btn-action flex items-center gap-1.5">
+              <i data-lucide="undo" class="w-3.5 h-3.5"></i>
+              FORCE MANUAL ROLLBACK
+            </button>
+
+            <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <span>Pacing Speed:</span>
+              <select v-model.number="playbackSpeed" class="bg-slate-900 text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none">
+                <option :value="1.2">0.8x (Cinematic / Video Demo)</option>
+                <option :value="0.7">1.0x (Standard)</option>
+                <option :value="0.3">2.0x (Fast)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+    </div> <!-- END VIEW 2: TIME MACHINE INSPECTOR -->
+
+    <!-- FOOTER -->
+    <footer class="text-center text-xs font-mono text-slate-500 py-3 flex items-center justify-between border-t border-slate-900">
+      <span>Agent Time Machine • ACID-Compliant Autonomous Agent Architecture</span>
+      <span>Tsinghua Research Paper Implementation • 100% Local</span>
+    </footer>
+
+  </div>
+
+  <!-- Vue Application Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
