@@ -34,6 +34,9 @@ export function PosterRenderPanel({
 }) {
   const [zoom, setZoom] = useState(60)
   const [selected, setSelected] = useState<SelectedPanel | null>(null)
+  const [overrideText, setOverrideText] = useState<string>("")
+  const [overrideOpen, setOverrideOpen] = useState(false)
+  const [overrideSaving, setOverrideSaving] = useState(false)
   const [activeHtml, setActiveHtml] = useState<string | null>(posterHtml)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
@@ -47,6 +50,7 @@ export function PosterRenderPanel({
       const data = e.data as { type?: string; panel?: Record<string, string> } | null
       if (!data || data.type !== "aips-panel-click" || !data.panel) return
       setSelected({ type: data.panel["data-panel-type"] ?? "unknown", attrs: data.panel })
+      setOverrideOpen(false)
     }
     window.addEventListener("message", handler)
     return () => window.removeEventListener("message", handler)
@@ -114,6 +118,34 @@ export function PosterRenderPanel({
     } catch (err) {
       console.error(err)
       alert("PDF export failed. See server logs.")
+    }
+  }
+
+  async function savePanelOverride() {
+    if (!selected || !overrideText.trim()) return
+    const panelId = selected.attrs["data-panel-id"]
+    if (!panelId) return
+    setOverrideSaving(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/panel-override`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ panelId, text: overrideText.trim() }),
+      })
+      if (!res.ok) throw new Error("Override save failed")
+      // Trigger a new draft that applies the override
+      void fetch(`/api/projects/${projectId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: `User overrode panel "${panelId}" content.` }),
+      })
+      setOverrideOpen(false)
+      setSelected(null)
+    } catch (err) {
+      console.error(err)
+      alert("Override failed. See console.")
+    } finally {
+      setOverrideSaving(false)
     }
   }
 
@@ -235,6 +267,60 @@ export function PosterRenderPanel({
             </button>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-fg-2">{reasoning.body}</p>
+          {selected.attrs["data-panel-id"] && (
+            <div className="mt-3 border-t border-ws-hairline pt-3">
+              {!overrideOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOverrideText(
+                      selected.attrs["data-claim-text"] ??
+                        selected.attrs["data-section-title"] ??
+                        selected.attrs["data-title"] ??
+                        selected.attrs["data-abstract-text"] ??
+                        "",
+                    )
+                    setOverrideOpen(true)
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md border border-ws-hairline bg-white px-2 py-1 text-xs font-medium text-fg hover:bg-ws-active"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Override text
+                </button>
+              ) : (
+                <div>
+                  <label htmlFor="override-text" className="text-caption-uppercase text-muted">
+                    New text for this panel
+                  </label>
+                  <textarea
+                    id="override-text"
+                    value={overrideText}
+                    onChange={(e) => setOverrideText(e.target.value)}
+                    rows={4}
+                    className="mt-1 w-full rounded-md border border-ws-hairline bg-white p-2 text-fg-2 text-xs"
+                    maxLength={2000}
+                  />
+                  <div className="mt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOverrideOpen(false)}
+                      className="rounded-md border border-ws-hairline bg-white px-2 py-1 text-xs font-medium text-fg hover:bg-ws-active"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={savePanelOverride}
+                      disabled={overrideSaving || !overrideText.trim()}
+                      className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+                    >
+                      {overrideSaving ? "Saving…" : "Save & re-render"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {Object.keys(selected.attrs).length > 0 && (
             <details className="mt-3 text-xs">
               <summary className="cursor-pointer text-muted">Raw panel data</summary>

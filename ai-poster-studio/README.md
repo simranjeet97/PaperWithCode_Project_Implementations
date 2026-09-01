@@ -69,6 +69,26 @@ The whole pipeline finishes in **2–5 minutes** for a typical paper.
 
 ---
 
+## What's new in v0.2
+
+The MVP ships with the full agent loop and a working workspace. v0.2 layers on real editing power:
+
+- **Box resize.** Every panel (`.panel`, `.figure`, `.diagram`, `.claims`, `.table-block`, `.abstract`) is `resize: both` in CSS — drag the bottom-right corner in the editor to make a panel larger or smaller, then save.
+- **Real PDF export.** Export route uses Puppeteer + Chromium with `page.pdf({ width: "841mm", height: "1189mm", printBackground: true })`. Output matches the template's declared page size.
+- **5 templates, not 1.** CVPR portrait / CVPR landscape / ICML portrait / NeurIPS portrait / Nature portrait — each with its own layout (2col, landscape-flow, stack, neurips, nature) and accent treatment.
+- **KaTeX.** Inline math detection (`$...$` and `$$...$$`) renders via the KaTeX CDN with SRI hashes. Attention formula is hard-coded as a fallback.
+- **Tables.** `pdfplumber` Python helper wraps table cell grid into a `.table-block` panel.
+- **Architecture diagrams.** Inline SVG generated from the paper's Method section via pattern-matching ("we propose X, Y, Z" / "the model consists of...").
+- **Drag-to-reorder.** Move Up / Move Down buttons on every panel in the editor list.
+- **Click-to-explain.** Click any element in the poster preview → popover with the agent's reasoning for that panel.
+- **Per-panel overrides.** Click a panel → "Override text" → write new text → re-render. Stored as `project.panelOverrides` and applied as a post-process pass over generated HTML.
+- **Mid-project template switch.** Settings modal in the workspace header lets you swap templates + accent color without re-uploading. Triggers a re-run with the new layout.
+- **Size badge.** Workspace header always shows `CVPR · portrait · 841×1189mm` so you can verify the export will match.
+
+**Roadmap →** see [`docs/ROADMAP.md`](./docs/ROADMAP.md). **Status:** MVP complete, 13 of 16 v1 features shipped.
+
+---
+
 ## Repository Structure
 
 ```

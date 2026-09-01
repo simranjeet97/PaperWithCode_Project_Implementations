@@ -3,7 +3,8 @@
 import { AgentActivityPanel } from "@/components/workspace/agent-activity-panel"
 import { PdfViewerPanel } from "@/components/workspace/pdf-viewer-panel"
 import { PosterRenderPanel } from "@/components/workspace/poster-render-panel"
-import { getTemplate } from "@/lib/agents/templates"
+import { TemplatePicker } from "@/components/workspace/template-picker"
+import { POSTER_TEMPLATES, getTemplate } from "@/lib/agents/templates"
 import type { AgentEvent, AgentStage } from "@aips/types"
 import { useEffect, useRef, useState } from "react"
 
@@ -31,6 +32,9 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
   const [status, setStatus] = useState<string>("loading")
   const [paperFileUrl, setPaperFileUrl] = useState<string | null>(null)
   const [templateId, setTemplateId] = useState<string>("cvpr-portrait")
+  const [accentColor, setAccentColor] = useState<string>("#4f46e5")
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
   const startedAt = useRef<Date>(new Date())
 
   // Poll project state every 1.5s
@@ -53,7 +57,7 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           template?: string
         }
         const projectData = (await projectRes.json()) as {
-          project: { paperFileUrl: string }
+          project: { paperFileUrl: string; accentColor?: string }
         }
         if (cancelled) return
         setEvents(data.events)
@@ -61,6 +65,7 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
         setStatus(data.status)
         setPosterHtml(data.posterHtml)
         setPaperFileUrl(projectData.project.paperFileUrl)
+        if (projectData.project.accentColor) setAccentColor(projectData.project.accentColor)
         if (data.template) setTemplateId(data.template)
         if (data.events.length > 0) {
           const last = data.events[data.events.length - 1]
@@ -90,6 +95,32 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
   const template = getTemplate(templateId)
   const orientation = template.pageSize.width >= template.pageSize.height ? "landscape" : "portrait"
 
+  async function saveSettings(nextTemplate: string, nextAccent: string) {
+    setSavingSettings(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: nextTemplate, accentColor: nextAccent }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      setTemplateId(nextTemplate)
+      setAccentColor(nextAccent)
+      setSettingsOpen(false)
+      // Trigger pipeline re-run with the new template
+      void fetch(`/api/projects/${projectId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: `Switch template to ${nextTemplate}.` }),
+      })
+    } catch (err) {
+      console.error(err)
+      alert("Settings save failed. See console.")
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-ws-hairline bg-ws-panel-2 px-4 py-2 text-xs">
@@ -103,6 +134,14 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           </span>
         </div>
         <span className="font-mono text-muted">status: {status}</span>
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="ml-3 inline-flex items-center gap-1 rounded-md border border-ws-hairline bg-white px-2 py-0.5 text-[11px] font-medium text-fg-2 hover:bg-ws-active"
+          aria-label="Project settings"
+        >
+          Settings
+        </button>
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-[320px_380px_1fr] divide-x divide-ws-hairline bg-ws-canvas">
         <PdfViewerPanel paperFileUrl={paperFileUrl} />
@@ -129,6 +168,116 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           projectId={projectId}
         />
       </div>
+      {settingsOpen ? (
+        <SettingsModal
+          currentTemplate={templateId}
+          currentAccent={accentColor}
+          saving={savingSettings}
+          onClose={() => setSettingsOpen(false)}
+          onSave={saveSettings}
+        />
+      ) : null}
     </div>
+  )
+}
+
+interface SettingsModalProps {
+  currentTemplate: string
+  currentAccent: string
+  saving: boolean
+  onClose: () => void
+  onSave: (template: string, accent: string) => void
+}
+
+function SettingsModal({
+  currentTemplate,
+  currentAccent,
+  saving,
+  onClose,
+  onSave,
+}: SettingsModalProps) {
+  const [template, setTemplate] = useState(currentTemplate)
+  const [accent, setAccent] = useState(currentAccent)
+  const presetAccents = POSTER_TEMPLATES.map((t) => "#4f46e5")
+  return (
+    <dialog
+      ref={(el) => el?.showModal()}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose()
+      }}
+      className="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-2xl rounded-xl border border-border bg-surface p-6 shadow-elevated backdrop:bg-black/40"
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-fg">Project settings</h2>
+          <p className="mt-1 text-xs text-muted">
+            Switching templates re-renders the poster with the new layout. Accent updates live.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md p-1 text-muted hover:bg-ws-active"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="mt-5">
+        <TemplatePicker value={template} onChange={setTemplate} />
+      </div>
+
+      <div className="mt-5">
+        <p className="text-caption-uppercase text-muted">Accent color</p>
+        <div className="mt-2 flex items-center gap-3">
+          {presetAccents.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setAccent(c)}
+              aria-label={`Accent ${c}`}
+              className={`h-6 w-6 rounded-pill border-2 transition-transform ${
+                accent.toLowerCase() === c.toLowerCase()
+                  ? "scale-125 border-fg"
+                  : "border-transparent hover:scale-110"
+              }`}
+              style={{ backgroundColor: c }}
+            />
+          ))}
+          <input
+            type="color"
+            value={accent}
+            onChange={(e) => setAccent(e.target.value)}
+            className="h-7 w-7 cursor-pointer rounded-pill border border-ws-hairline"
+            title="Custom color"
+          />
+          <span className="font-mono text-xs text-muted">{accent}</span>
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center rounded-md border border-ws-hairline bg-white px-3 py-1.5 text-xs font-medium text-fg hover:bg-ws-active"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => onSave(template, accent)}
+          className="inline-flex items-center rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+          style={{ backgroundColor: accent }}
+        >
+          {saving ? "Saving…" : "Save & re-render"}
+        </button>
+      </div>
+    </dialog>
   )
 }
