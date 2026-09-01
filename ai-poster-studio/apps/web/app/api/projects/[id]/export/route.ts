@@ -8,23 +8,8 @@ import { z } from "zod"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-// Page dimensions in millimetres. A0 = 841×1189, A4 = 210×297, US Letter = 215.9×279.4
-type TemplateKey =
-  | "cvpr-portrait"
-  | "cvpr-landscape"
-  | "icml-portrait"
-  | "neurips-portrait"
-  | "nature-portrait"
-  | "custom"
-
-const PAGE_SIZE_MM: Record<TemplateKey, { width: number; height: number }> = {
-  "cvpr-portrait": { width: 841, height: 1189 }, // A0 portrait
-  "cvpr-landscape": { width: 1189, height: 841 }, // A0 landscape
-  "icml-portrait": { width: 841, height: 1189 },
-  "neurips-portrait": { width: 1189, height: 841 },
-  "nature-portrait": { width: 841, height: 1189 },
-  custom: { width: 215.9, height: 279.4 }, // US Letter fallback
-}
+// Page dimensions sourced from the template definition (lib/agents/templates.ts).
+// Puppeteer uses CSS pixels. 96 CSS px = 1 inch = 25.4mm. So 1mm ≈ 3.7795 px.
 
 const schema = z.object({
   format: z.enum(["png", "pdf", "html"]),
@@ -66,7 +51,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   }
 
   const drafts = await listDraftsByProject(id)
-  const draft = drafts.find((d) => d.turnNumber === parsed.data.draftNumber) ?? drafts[0]
+  // Find all drafts with the requested turnNumber; prefer the most recent.
+  // If the client didn't specify (default 1), return the latest draft.
+  const turn = parsed.data.draftNumber
+  const matching = turn === 1 ? drafts : drafts.filter((d) => d.turnNumber === turn)
+  const draft = matching[matching.length - 1] ?? drafts[drafts.length - 1] ?? drafts[0]
   if (!draft?.htmlContent) {
     return NextResponse.json({ error: "No draft available" }, { status: 404 })
   }
@@ -88,10 +77,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     )
   }
 
-  // Resolve actual page dimensions from the template
-  const template = getTemplate(project.template)
-  const pageMm: { width: number; height: number } =
-    PAGE_SIZE_MM[project.template as TemplateKey] ?? PAGE_SIZE_MM.custom
+  // Resolve actual page dimensions from the template definition
+  const templateDef = getTemplate(project.template)
+  const pageMm: { width: number; height: number } = {
+    width: templateDef.pageSize.width,
+    height: templateDef.pageSize.height,
+  }
   // Puppeteer uses CSS pixels. 96 CSS px = 1 inch = 25.4mm. So 1mm ≈ 3.7795 px.
   const MM_TO_PX = 96 / 25.4
   const pagePx = {

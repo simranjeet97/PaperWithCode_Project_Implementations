@@ -53,7 +53,9 @@ export async function getCurrentUser() {
 export async function requireUser() {
   const user = await getCurrentUser()
   if (!user) {
-    throw new Error("Unauthorized")
+    const err = new Error("Unauthorized") as Error & { status: number }
+    err.status = 401
+    throw err
   }
   return user
 }
