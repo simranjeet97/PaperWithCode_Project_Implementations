@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* === Marketing (light theme) === */
+:root {
+  --bg: #f7f8fc;
+  --surface: #ffffff;
+  --surface-warm: #eef1ff;
+  --surface-cream: #faf9f5;
+  --fg: #111827;
+  --fg-2: #374151;
+  --muted: #6b7280;
+  --meta: #9ca3af;
+  --border: #dfe3ed;
+  --border-soft: #eef1f7;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-active: #3c34b3;
+  --accent-soft: #eef1ff;
+  --success: #10b981;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+
+  /* === Workspace === */
+  --ws-canvas: #f4f5f8;
+  --ws-panel: #ffffff;
+  --ws-panel-2: #fafbfc;
+  --ws-hairline: #e4e7ed;
+  --ws-active: #eef1ff;
+
+  /* === Timeline pastels (workspace only) === */
+  --timeline-reading: #9fbbe0;
+  --timeline-extracting: #dfa88f;
+  --timeline-planning: #c0a8dd;
+  --timeline-rendering: #9fc9a2;
+  --timeline-critique: #f5c97f;
+  --timeline-done: #c08532;
+
+  /* === Spacing === */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* === Radius === */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* === Shadows === */
+  --shadow-raised: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --shadow-elevated: 0 22px 58px rgba(17, 24, 39, 0.11);
+  --shadow-floating: 0 32px 80px rgba(17, 24, 39, 0.14);
+
+  /* === Fonts === */
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@theme {
+  --color-bg: #f7f8fc;
+  --color-surface: #ffffff;
+  --color-surface-warm: #eef1ff;
+  --color-surface-cream: #faf9f5;
+  --color-fg: #111827;
+  --color-fg-2: #374151;
+  --color-muted: #6b7280;
+  --color-meta: #9ca3af;
+  --color-border: #dfe3ed;
+  --color-border-soft: #eef1f7;
+  --color-accent: #4f46e5;
+  --color-accent-hover: #4338ca;
+  --color-accent-active: #3c34b3;
+  --color-accent-soft: #eef1ff;
+  --color-success: #10b981;
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+
+  --color-ws-canvas: #f4f5f8;
+  --color-ws-panel: #ffffff;
+  --color-ws-panel-2: #fafbfc;
+  --color-ws-hairline: #e4e7ed;
+  --color-ws-active: #eef1ff;
+
+  --color-timeline-reading: #9fbbe0;
+  --color-timeline-extracting: #dfa88f;
+  --color-timeline-planning: #c0a8dd;
+  --color-timeline-rendering: #9fc9a2;
+  --color-timeline-critique: #f5c97f;
+  --color-timeline-done: #c08532;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--accent-active);
+  }
+
+  p {
+    color: var(--fg-2);
+  }
+}
+
+@layer utilities {
+  .text-hero {
+    font-size: clamp(48px, 7vw, 76px);
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+  }
+
+  .text-section {
+    font-size: clamp(36px, 4vw, 54px);
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+
+  .text-sub {
+    font-size: clamp(24px, 2.5vw, 36px);
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--fg);
+  }
+
+  .text-lead {
+    font-size: clamp(18px, 1.4vw, 20px);
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+
+  .text-caption-uppercase {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.88px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .section-rhythm {
+    padding-top: clamp(64px, 10vw, 96px);
+    padding-bottom: clamp(64px, 10vw, 96px);
+  }
+
+  .ease-out-expo {
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+h1,
+h2,
+.text-hero,
+.text-section,
+.text-sub {
+  font-feature-settings: "cv01", "ss03", "ss06";
+}

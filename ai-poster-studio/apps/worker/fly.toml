@@ -1,0 +1,28 @@
+app = "aips-worker"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  GROQ_API_KEY = "${GROQ_API_KEY}"
+  GEMINI_API_KEY = "${GEMINI_API_KEY}"
+  ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
+  WORKER_API_KEY = "${WORKER_API_KEY}"
+  R2_ACCOUNT_ID = "${R2_ACCOUNT_ID}"
+  R2_ACCESS_KEY_ID = "${R2_ACCESS_KEY_ID}"
+  R2_SECRET_ACCESS_KEY = "${R2_SECRET_ACCESS_KEY}"
+  R2_BUCKET_NAME = "${R2_BUCKET_NAME}"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 4096
