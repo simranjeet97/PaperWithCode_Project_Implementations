@@ -133,12 +133,15 @@ export function PosterRenderPanel({
         body: JSON.stringify({ panelId, text: overrideText.trim() }),
       })
       if (!res.ok) throw new Error("Override save failed")
-      // Trigger a new draft that applies the override
-      void fetch(`/api/projects/${projectId}/feedback`, {
+
+      // Trigger a pipeline re-run so the next draft contains the override
+      const feedbackRes = await fetch(`/api/projects/${projectId}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: `User overrode panel "${panelId}" content.` }),
+        body: JSON.stringify({ feedback: `Apply override for panel ${panelId}` }),
       })
+      if (!feedbackRes.ok) console.warn("Override saved but pipeline trigger failed")
+
       setOverrideOpen(false)
       setSelected(null)
     } catch (err) {
