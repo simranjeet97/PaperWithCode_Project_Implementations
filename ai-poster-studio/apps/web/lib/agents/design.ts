@@ -25,10 +25,11 @@ export type DesignInput = {
   turnNumber: number
   previousFeedback: string | null
   template?: string
+  panelOverrides?: Record<string, string>
 }
 
 export async function generatePosterHTML(input: DesignInput): Promise<string> {
-  const { contentBrief, posterPlan, turnNumber, previousFeedback, template } = input
+  const { contentBrief, posterPlan, turnNumber, previousFeedback, template, panelOverrides } = input
   const templateDef = getTemplate(template ?? "cvpr-portrait")
 
   // Optional: ask Ollama for a refined tagline (gracefully degrades).
@@ -179,7 +180,7 @@ export async function generatePosterHTML(input: DesignInput): Promise<string> {
     </script>
   `
 
-  return `<!DOCTYPE html>
+  let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -370,6 +371,26 @@ ${clickScript}
   </footer>
 </body>
 </html>`
+
+  if (panelOverrides && Object.keys(panelOverrides).length > 0) {
+    html = applyPanelOverrides(html, panelOverrides)
+  }
+
+  return html
+}
+
+function applyPanelOverrides(html: string, overrides: Record<string, string>): string {
+  let out = html
+  for (const [panelId, replacement] of Object.entries(overrides)) {
+    if (!replacement || !panelId) continue
+    const safeId = escapeHtmlAttr(panelId)
+    const safeReplacement = escapeHtml(replacement).replace(/\n/g, "<br>")
+    const re = new RegExp(
+      `(<[a-zA-Z][^>]*data-panel-id="${safeId}"[^>]*>)([\\s\\S]*?)(<\\/[a-zA-Z]+>)`,
+    )
+    out = out.replace(re, (_match, open, _inner, close) => `${open}${safeReplacement}${close}`)
+  }
+  return out
 }
 
 type BodyInput = {

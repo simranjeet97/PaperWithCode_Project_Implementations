@@ -91,6 +91,7 @@ export async function runPipeline(projectId: string, feedback?: string): Promise
       turnNumber: turn,
       previousFeedback: lastFeedback,
       template: project.template,
+      panelOverrides: project.panelOverrides ?? undefined,
     })
 
     const draft = await createDraft({
