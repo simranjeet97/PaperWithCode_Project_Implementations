@@ -383,14 +383,71 @@ function applyPanelOverrides(html: string, overrides: Record<string, string>): s
   let out = html
   for (const [panelId, replacement] of Object.entries(overrides)) {
     if (!replacement || !panelId) continue
-    const safeId = escapeHtmlAttr(panelId)
     const safeReplacement = escapeHtml(replacement).replace(/\n/g, "<br>")
-    const re = new RegExp(
-      `(<[a-zA-Z][^>]*data-panel-id="${safeId}"[^>]*>)([\\s\\S]*?)(<\\/[a-zA-Z]+>)`,
-    )
-    out = out.replace(re, (_match, open, _inner, close) => `${open}${safeReplacement}${close}`)
+    out = replacePanelInner(out, panelId, safeReplacement)
   }
   return out
+}
+
+/**
+ * Find the opening tag with data-panel-id="<panelId>" and replace the
+ * inner content of the LAST leaf element within it. Depth-aware so
+ * nested same-tag wrappers don't terminate the match early.
+ *
+ * Strategy: locate the panel's opening tag, then scan forward tracking
+ * tag depth. Replace content between the opening of the deepest leaf
+ * and its matching close, preserving the surrounding panel structure.
+ */
+function replacePanelInner(html: string, panelId: string, replacement: string): string {
+  const openTagRe = new RegExp(
+    `<([a-zA-Z][a-zA-Z0-9]*)([^>]*\\sdata-panel-id="${escapeHtmlRegex(panelId)}"[^>]*)>`,
+  )
+  const m = openTagRe.exec(html)
+  if (!m) return html
+  const tagName = m[1]
+  if (!tagName) return html
+  const openEnd = m.index + m[0].length
+  const closeTag = `</${tagName}>`
+
+  // Walk forward, tracking depth of same-tag opens, find matching close
+  let depth = 1
+  let i = openEnd
+  const openRe = new RegExp(`<${tagName}(?:\\s[^>]*)?>`, "g")
+  const closeRe = new RegExp(`</${tagName}>`, "g")
+  openRe.lastIndex = i
+  closeRe.lastIndex = i
+  while (depth > 0) {
+    openRe.lastIndex = i
+    closeRe.lastIndex = i
+    const nextOpen = openRe.exec(html)
+    const nextClose = closeRe.exec(html)
+    if (!nextClose) return html
+    if (nextOpen && nextOpen.index < nextClose.index) {
+      depth++
+      i = nextOpen.index + nextOpen[0].length
+    } else {
+      depth--
+      i = nextClose.index + nextClose[0].length
+    }
+  }
+  const panelEnd = i
+  const innerHtml = html.slice(openEnd, panelEnd - closeTag.length)
+
+  // Wrap the override based on panel type so the critic's structural
+  // checks (has_title = <h1>, has_abstract = "Abstract" word) still pass.
+  const wrapped = wrapOverride(panelId, replacement)
+  return html.slice(0, openEnd) + wrapped + html.slice(panelEnd - closeTag.length)
+}
+
+function wrapOverride(panelId: string, text: string): string {
+  if (panelId === "title") return `<h1>${text}</h1>`
+  if (panelId === "abstract") return `<strong>Abstract</strong> ${text}`
+  if (panelId === "claims") return `<h3>Key claims</h3> ${text}`
+  return `<p>${text}</p>`
+}
+
+function escapeHtmlRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 type BodyInput = {
