@@ -66,11 +66,30 @@ export async function generateArchitectureDiagram(
     // For ML papers: "encoder", "decoder", "attention", "layer", etc.
     const lower = text.toLowerCase()
     const TECH_TERMS = [
-      "encoder", "decoder", "attention", "input", "output", "embedding",
-      "layer", "head", "feed-forward", "position-wise", "residual",
-      "normalization", "token", "embedding layer", "self-attention",
-      "multi-head attention", "encoder layer", "decoder layer",
-      "linear projection", "softmax", "mask", "query", "key", "value",
+      "encoder",
+      "decoder",
+      "attention",
+      "input",
+      "output",
+      "embedding",
+      "layer",
+      "head",
+      "feed-forward",
+      "position-wise",
+      "residual",
+      "normalization",
+      "token",
+      "embedding layer",
+      "self-attention",
+      "multi-head attention",
+      "encoder layer",
+      "decoder layer",
+      "linear projection",
+      "softmax",
+      "mask",
+      "query",
+      "key",
+      "value",
     ]
     const found = TECH_TERMS.filter((term) => lower.includes(term))
     if (found.length >= 2) {
@@ -79,8 +98,27 @@ export async function generateArchitectureDiagram(
       // Last resort: capitalized noun phrases
       const phrases = text.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}/g) ?? []
       const SKIP = new Set([
-        "The", "This", "These", "Our", "We", "In", "An", "It", "As", "By", "All", "Most",
-        "Given", "Each", "Both", "Many", "Some", "One", "Two", "Three", "Here",
+        "The",
+        "This",
+        "These",
+        "Our",
+        "We",
+        "In",
+        "An",
+        "It",
+        "As",
+        "By",
+        "All",
+        "Most",
+        "Given",
+        "Each",
+        "Both",
+        "Many",
+        "Some",
+        "One",
+        "Two",
+        "Three",
+        "Here",
       ])
       const candidates = phrases
         .filter((p) => !SKIP.has(p.split(" ")[0] ?? ""))
@@ -133,7 +171,7 @@ export async function generateArchitectureDiagram(
     }
   })
 
-  svg += `</svg>`
+  svg += "</svg>"
 
   return {
     svg,

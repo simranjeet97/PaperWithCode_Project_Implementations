@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Palette, RotateCcw, Save, ChevronUp, ChevronDown } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronUp, Palette, RotateCcw, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -67,6 +67,7 @@ export default function EditorPage() {
   const [order, setOrder] = useState<string[]>([])
 
   // Discover panels from the loaded HTML
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when iframe srcDoc changes
   useEffect(() => {
     if (!iframeRef.current?.contentDocument) return
     const doc = iframeRef.current.contentDocument
@@ -99,6 +100,8 @@ export default function EditorPage() {
     )
     setOrder(newOrder)
   }
+
+  const onIframeLoad = () => {
     const doc = iframeRef.current?.contentDocument
     if (!doc) return
     // Inject editable styles + a style element for live accent
@@ -296,7 +299,7 @@ export default function EditorPage() {
                   if (id.startsWith("section-")) label = `Section ${idx}`
                   if (id.startsWith("figure-")) label = `Figure ${idx - 1}`
                   if (id.startsWith("claim-")) label = `Claim ${idx - 1}`
-                  if (id.startsWith("table-")) label = `Table`
+                  if (id.startsWith("table-")) label = "Table"
                   return (
                     <li
                       key={id}

@@ -1,6 +1,6 @@
+import { getTemplate } from "@/lib/agents/templates"
 import { requireUser } from "@/lib/auth/session"
 import { getProject, listDraftsByProject } from "@/lib/db/local"
-import { getTemplate } from "@/lib/agents/templates"
 import { NextResponse } from "next/server"
 import puppeteer from "puppeteer-core"
 import { z } from "zod"
@@ -9,13 +9,21 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 // Page dimensions in millimetres. A0 = 841×1189, A4 = 210×297, US Letter = 215.9×279.4
-const PAGE_SIZE_MM: Record<string, { width: number; height: number }> = {
+type TemplateKey =
+  | "cvpr-portrait"
+  | "cvpr-landscape"
+  | "icml-portrait"
+  | "neurips-portrait"
+  | "nature-portrait"
+  | "custom"
+
+const PAGE_SIZE_MM: Record<TemplateKey, { width: number; height: number }> = {
   "cvpr-portrait": { width: 841, height: 1189 }, // A0 portrait
   "cvpr-landscape": { width: 1189, height: 841 }, // A0 landscape
   "icml-portrait": { width: 841, height: 1189 },
   "neurips-portrait": { width: 1189, height: 841 },
   "nature-portrait": { width: 841, height: 1189 },
-  "custom": { width: 215.9, height: 279.4 }, // US Letter fallback
+  custom: { width: 215.9, height: 279.4 }, // US Letter fallback
 }
 
 const schema = z.object({
@@ -82,7 +90,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   // Resolve actual page dimensions from the template
   const template = getTemplate(project.template)
-  const pageMm = PAGE_SIZE_MM[project.template] ?? PAGE_SIZE_MM.custom
+  const pageMm: { width: number; height: number } =
+    PAGE_SIZE_MM[project.template as TemplateKey] ?? PAGE_SIZE_MM.custom
   // Puppeteer uses CSS pixels. 96 CSS px = 1 inch = 25.4mm. So 1mm ≈ 3.7795 px.
   const MM_TO_PX = 96 / 25.4
   const pagePx = {
