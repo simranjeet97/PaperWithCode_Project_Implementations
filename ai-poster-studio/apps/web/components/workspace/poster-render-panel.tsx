@@ -47,14 +47,54 @@ export function PosterRenderPanel({
   // Listen for click events bubbled from the iframe
   useEffect(() => {
     function handler(e: MessageEvent) {
-      const data = e.data as { type?: string; panel?: Record<string, string> } | null
-      if (!data || data.type !== "aips-panel-click" || !data.panel) return
-      setSelected({ type: data.panel["data-panel-type"] ?? "unknown", attrs: data.panel })
-      setOverrideOpen(false)
+      const data = e.data as { type?: string; panel?: Record<string, string>; html?: string } | null
+      if (!data) return
+      if (data.type === "aips-panel-click" && data.panel) {
+        setSelected({ type: data.panel["data-panel-type"] ?? "unknown", attrs: data.panel })
+        setOverrideOpen(false)
+        return
+      }
+      if (data.type === "aips-content-edited") {
+        // User typed/resized in the iframe — mark dirty without reloading
+        setDirty(true)
+      }
     }
     window.addEventListener("message", handler)
     return () => window.removeEventListener("message", handler)
   }, [])
+
+  const [dirty, setDirty] = useState(false)
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
+
+  // Track the latest draft id for save-back
+  useEffect(() => {
+    const d = drafts.find((x) => x.turnNumber === currentDraft)
+    setDraftId(d?.id ?? null)
+    setDirty(false)
+  }, [drafts, currentDraft])
+
+  const saveDraftEdits = async () => {
+    if (!draftId) return
+    const doc = iframeRef.current?.contentDocument
+    const liveHtml = doc ? doc.documentElement.outerHTML : activeHtml
+    if (!liveHtml) return
+    setSavingDraft(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/drafts/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ htmlContent: liveHtml }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      setDirty(false)
+    } catch (err) {
+      console.error(err)
+      alert("Save failed. See console.")
+    } finally {
+      setSavingDraft(false)
+    }
+  }
 
   const draft = useMemo(
     () => drafts.find((d) => d.turnNumber === currentDraft),
@@ -158,8 +198,19 @@ export function PosterRenderPanel({
         <p className="text-caption-uppercase text-muted">
           Poster preview · Draft {currentDraft}
           {draft?.accepted && " · accepted ✓"}
+          {dirty && " · unsaved changes"}
         </p>
         <div className="flex items-center gap-2">
+          {dirty && (
+            <button
+              type="button"
+              onClick={saveDraftEdits}
+              disabled={savingDraft}
+              className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+            >
+              {savingDraft ? "Saving…" : "Save edits"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(25, z - 10))}
@@ -199,6 +250,7 @@ export function PosterRenderPanel({
                 ref={iframeRef}
                 title="poster-preview"
                 srcDoc={activeHtml}
+                onLoad={() => injectPreviewBehavior(iframeRef.current)}
                 className="block border border-ws-hairline bg-white"
                 style={{ width: `${pageWidth}px`, height: `${(pageHeight * zoom) / 60}px` }}
                 sandbox="allow-same-origin allow-scripts"
@@ -344,6 +396,72 @@ export function PosterRenderPanel({
       )}
     </div>
   )
+}
+
+/**
+ * Inject preview-only behavior into the poster iframe:
+ *  - CSS `resize: both` on every [data-panel-id] so users can drag corners
+ *  - `contenteditable="plaintext-only"` on every text element inside panels
+ *  - postMessage back to the parent with the modified HTML on input/resize
+ */
+function injectPreviewBehavior(iframe: HTMLIFrameElement | null) {
+  if (!iframe) return
+  const doc = iframe.contentDocument
+  if (!doc) return
+
+  const styleId = "aips-preview-style"
+  if (doc.getElementById(styleId)) return
+  const style = doc.createElement("style")
+  style.id = styleId
+  style.textContent = `
+    [data-panel-id] {
+      resize: both !important;
+      overflow: auto !important;
+      min-width: 80px !important;
+      min-height: 40px !important;
+      box-sizing: border-box !important;
+    }
+    [data-panel-id]:hover {
+      outline: 1.5px dashed var(--accent, #4f46e5) !important;
+      outline-offset: 4px !important;
+    }
+    [data-panel-id] h1, [data-panel-id] h2, [data-panel-id] h3,
+    [data-panel-id] p, [data-panel-id] li, [data-panel-id] figcaption,
+    [data-panel-id] .tagline, [data-panel-id] .authors,
+    [data-panel-id] .claim span:last-child {
+      outline: 1px solid transparent;
+      transition: outline-color 0.1s;
+      border-radius: 2px;
+      cursor: text;
+    }
+    [data-panel-id] h1:hover, [data-panel-id] h2:hover, [data-panel-id] h3:hover,
+    [data-panel-id] p:hover, [data-panel-id] li:hover, [data-panel-id] figcaption:hover {
+      outline-color: var(--accent, #4f46e5);
+    }
+    [data-panel-id] h1:focus, [data-panel-id] h2:focus, [data-panel-id] h3:focus,
+    [data-panel-id] p:focus, [data-panel-id] li:focus, [data-panel-id] figcaption:focus {
+      outline: 2px solid var(--accent, #4f46e5) !important;
+      outline-offset: 2px;
+    }
+    body::after { content: none !important; }
+  `
+  doc.head.appendChild(style)
+
+  const targets = doc.querySelectorAll(
+    "[data-panel-id] h1, [data-panel-id] h2, [data-panel-id] h3, [data-panel-id] p, [data-panel-id] li, [data-panel-id] figcaption, [data-panel-id] .tagline, [data-panel-id] .authors",
+  )
+  for (const el of Array.from(targets)) {
+    ;(el as HTMLElement).setAttribute("contenteditable", "plaintext-only")
+  }
+
+  const ship = () => {
+    const html = doc.documentElement.outerHTML
+    window.parent.postMessage({ type: "aips-content-edited", html }, "*")
+  }
+  doc.addEventListener("input", ship)
+  doc.addEventListener("mouseup", () => {
+    setTimeout(ship, 50)
+  })
 }
 
 function EmptyState() {

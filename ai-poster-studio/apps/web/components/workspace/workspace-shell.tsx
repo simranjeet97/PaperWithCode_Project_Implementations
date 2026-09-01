@@ -35,6 +35,8 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
   const [accentColor, setAccentColor] = useState<string>("#4f46e5")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [leftWidth, setLeftWidth] = useState(320)
+  const [middleWidth, setMiddleWidth] = useState(380)
   const startedAt = useRef<Date>(new Date())
 
   // Poll project state every 1.5s
@@ -143,7 +145,12 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           Settings
         </button>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-[320px_380px_1fr] divide-x divide-ws-hairline bg-ws-canvas">
+      <ResizableGrid
+        leftWidth={leftWidth}
+        middleWidth={middleWidth}
+        onResize={setLeftWidth}
+        onResizeMid={setMiddleWidth}
+      >
         <PdfViewerPanel paperFileUrl={paperFileUrl} />
         <AgentActivityPanel
           events={events}
@@ -167,7 +174,7 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           posterHtml={posterHtml}
           projectId={projectId}
         />
-      </div>
+      </ResizableGrid>
       {settingsOpen ? (
         <SettingsModal
           currentTemplate={templateId}
@@ -279,5 +286,103 @@ function SettingsModal({
         </button>
       </div>
     </dialog>
+  )
+}
+
+interface ResizableGridProps {
+  leftWidth: number
+  middleWidth: number
+  onResize: (w: number) => void
+  onResizeMid: (w: number) => void
+  children: [React.ReactNode, React.ReactNode, React.ReactNode]
+}
+
+function ResizableGrid({
+  leftWidth,
+  middleWidth,
+  onResize,
+  onResizeMid,
+  children,
+}: ResizableGridProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<{
+    startX: number
+    startLeft: number
+    startMid: number
+    target: "left" | "mid"
+  } | null>(null)
+
+  const onMouseDown = (target: "left" | "mid") => (e: React.MouseEvent) => {
+    e.preventDefault()
+    dragRef.current = { startX: e.clientX, startLeft: leftWidth, startMid: middleWidth, target }
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const d = dragRef.current
+      if (!d) return
+      const dx = e.clientX - d.startX
+      if (d.target === "left") {
+        const next = Math.max(220, Math.min(640, d.startLeft + dx))
+        onResize(next)
+      } else {
+        const next = Math.max(260, Math.min(720, d.startMid + dx))
+        onResizeMid(next)
+      }
+    }
+    function onUp() {
+      if (!dragRef.current) return
+      dragRef.current = null
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+    return () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+    }
+  }, [onResize, onResizeMid])
+
+  return (
+    <div ref={containerRef} className="flex min-h-0 flex-1 bg-ws-canvas" style={{ minWidth: 0 }}>
+      <div
+        style={{ width: `${leftWidth}px`, minWidth: 0 }}
+        className="flex h-full min-w-0 flex-col border-r border-ws-hairline"
+      >
+        {children[0]}
+      </div>
+      {/* biome-ignore lint/a11y/useSemanticElements: <hr> doesn't accept onMouseDown + drag interaction */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        tabIndex={0}
+        onMouseDown={onMouseDown("left")}
+        className="group relative flex h-full w-1.5 cursor-col-resize items-center justify-center bg-ws-canvas hover:bg-accent/30"
+        title="Drag to resize"
+      >
+        <span className="block h-8 w-0.5 rounded-full bg-ws-hairline group-hover:bg-accent" />
+      </div>
+      <div
+        style={{ width: `${middleWidth}px`, minWidth: 0 }}
+        className="flex h-full min-w-0 flex-col border-r border-ws-hairline"
+      >
+        {children[1]}
+      </div>
+      {/* biome-ignore lint/a11y/useSemanticElements: <hr> doesn't accept onMouseDown + drag interaction */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        tabIndex={0}
+        onMouseDown={onMouseDown("mid")}
+        className="group relative flex h-full w-1.5 cursor-col-resize items-center justify-center bg-ws-canvas hover:bg-accent/30"
+        title="Drag to resize"
+      >
+        <span className="block h-8 w-0.5 rounded-full bg-ws-hairline group-hover:bg-accent" />
+      </div>
+      <div className="min-w-0 flex-1">{children[2]}</div>
+    </div>
   )
 }
