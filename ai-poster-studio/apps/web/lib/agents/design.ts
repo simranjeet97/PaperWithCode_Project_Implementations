@@ -14,10 +14,10 @@
 import "server-only"
 import { getOllamaBaseUrl, ollamaComplete } from "@/lib/llm/ollama"
 import { generateArchitectureDiagram } from "./diagram"
-import { renderMathInText } from "./math"
-import { getTemplate } from "./templates"
 import type { ContentBrief } from "./ingest"
+import { renderMathInText } from "./math"
 import type { PosterPlan } from "./plan"
+import { getTemplate } from "./templates"
 
 export type DesignInput = {
   contentBrief: ContentBrief
@@ -104,7 +104,8 @@ export async function generatePosterHTML(input: DesignInput): Promise<string> {
       // pdfplumber often returns the "header" row as a single string
       // concatenated from line-wrapped text. Detect that and put all
       // content into rows.
-      const looksLikeHeader = t.headers.length > 0 &&
+      const looksLikeHeader =
+        t.headers.length > 0 &&
         t.headers.every((h) => h.length < 30) &&
         t.headers.some((h) => /[a-zA-Z]/.test(h))
       const headerRow = looksLikeHeader
@@ -117,9 +118,11 @@ export async function generatePosterHTML(input: DesignInput): Promise<string> {
       return `
         <div class="table-block" data-panel-id="table-${escapeHtmlAttr(t.id)}" data-panel-type="table" data-table-caption="${escapeHtmlAttr(t.caption)}">
           <h3>${escapeHtml(t.caption || `Table from page ${t.pageNumber}`)}</h3>
-          ${bodyRows
-            ? `<table class="poster-table">${headerRow ? `<thead>${headerRow}</thead>` : ""}<tbody>${bodyRows}</tbody></table>`
-            : `<p class="table-note">See paper page ${t.pageNumber} for the full table.</p>`}
+          ${
+            bodyRows
+              ? `<table class="poster-table">${headerRow ? `<thead>${headerRow}</thead>` : ""}<tbody>${bodyRows}</tbody></table>`
+              : `<p class="table-note">See paper page ${t.pageNumber} for the full table.</p>`
+          }
         </div>`
     })
     .join("")

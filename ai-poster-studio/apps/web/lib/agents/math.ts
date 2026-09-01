@@ -17,7 +17,8 @@ const DISPLAY_PATTERN = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])/g
 // Common math shortcuts found in ML papers — convert plain to LaTeX
 const SUBSCRIPT_RE = /\b([A-Za-z]+)_(\d+|[A-Za-z])\b/g // x_1, x_n -> x_{1}, x_{n}
 const SUPERSCRIPT_RE = /\b([A-Za-z])\^(\d+|[A-Za-z])\b/g // x^2, x^T -> x^{2}, x^{T}
-const GREEK_RE = /\b(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|lambda|mu|pi|sigma|tau|phi|psi|omega)\b/g
+const GREEK_RE =
+  /\b(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|lambda|mu|pi|sigma|tau|phi|psi|omega)\b/g
 
 export type MathSegment =
   | { type: "text"; value: string }

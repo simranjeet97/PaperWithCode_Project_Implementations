@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 const PROTECTED_PATHS = ["/app", "/app/new", "/app/p"]
 

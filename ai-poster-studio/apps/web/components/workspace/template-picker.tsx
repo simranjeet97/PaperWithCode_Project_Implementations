@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { POSTER_TEMPLATES } from "@/lib/agents/templates"
+import { useState } from "react"
 
 export function TemplatePicker({
   value,
@@ -77,7 +77,10 @@ function TemplatePreview({ layout, accent }: { layout: string; accent: string })
           <div className="h-1 w-3/4 rounded bg-fg/10" />
         </div>
         <div className="flex-1">
-          <div className="h-full w-full rounded" style={{ backgroundColor: accent, opacity: 0.5 }} />
+          <div
+            className="h-full w-full rounded"
+            style={{ backgroundColor: accent, opacity: 0.5 }}
+          />
         </div>
         <div className="flex-1 space-y-0.5">
           <div className="h-1 w-full rounded bg-fg/10" />

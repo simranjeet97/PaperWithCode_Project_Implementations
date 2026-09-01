@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { UploadZone } from "./upload-zone"
 import { TemplatePicker } from "./template-picker"
+import { UploadZone } from "./upload-zone"
 
 export function UploadZoneClient() {
   const [template, setTemplate] = useState("cvpr-portrait")

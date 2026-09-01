@@ -29,7 +29,8 @@ export const POSTER_TEMPLATES: PosterTemplateDef[] = [
     id: "cvpr-portrait",
     name: "CVPR Portrait",
     shortName: "CVPR",
-    description: "Standard 2-column vertical layout. Title + abstract on top, sections on the left, figures/diagrams/claims/table on the right.",
+    description:
+      "Standard 2-column vertical layout. Title + abstract on top, sections on the left, figures/diagrams/claims/table on the right.",
     aspectRatio: "A0-portrait",
     layout: "2col",
     pageSize: { width: 841, height: 1189 },
@@ -39,7 +40,8 @@ export const POSTER_TEMPLATES: PosterTemplateDef[] = [
     id: "cvpr-landscape",
     name: "CVPR Landscape",
     shortName: "CVPR L",
-    description: "Wide 3-column horizontal flow. Big architecture diagram in the center, sections fan out left and right.",
+    description:
+      "Wide 3-column horizontal flow. Big architecture diagram in the center, sections fan out left and right.",
     aspectRatio: "A0-landscape",
     layout: "landscape-flow",
     pageSize: { width: 1189, height: 841 },
@@ -48,7 +50,8 @@ export const POSTER_TEMPLATES: PosterTemplateDef[] = [
     id: "icml-portrait",
     name: "ICML Portrait",
     shortName: "ICML",
-    description: "Single-column stacked layout. Sections flow top-to-bottom in full width — best for narrative-heavy papers.",
+    description:
+      "Single-column stacked layout. Sections flow top-to-bottom in full width — best for narrative-heavy papers.",
     aspectRatio: "A0-portrait",
     layout: "stack",
     pageSize: { width: 841, height: 1189 },
@@ -57,7 +60,8 @@ export const POSTER_TEMPLATES: PosterTemplateDef[] = [
     id: "neurips-portrait",
     name: "NeurIPS Portrait",
     shortName: "NeurIPS",
-    description: "Hero header layout. Title section takes 30% of canvas, abstract spans full width, then 2-column body.",
+    description:
+      "Hero header layout. Title section takes 30% of canvas, abstract spans full width, then 2-column body.",
     aspectRatio: "A0-portrait",
     layout: "neurips",
     pageSize: { width: 841, height: 1189 },
@@ -66,7 +70,8 @@ export const POSTER_TEMPLATES: PosterTemplateDef[] = [
     id: "nature-portrait",
     name: "Nature Portrait",
     shortName: "Nature",
-    description: "Minimal magazine layout. Large abstract, three key claims highlighted, condensed sections.",
+    description:
+      "Minimal magazine layout. Large abstract, three key claims highlighted, condensed sections.",
     aspectRatio: "A0-portrait",
     layout: "nature",
     pageSize: { width: 841, height: 1189 },

@@ -68,8 +68,8 @@ export function UploadZone() {
             title: file.name.replace(/\.pdf$/i, ""),
             paperFileUrl: fileUrl,
             template:
-              (document.querySelector("[data-template]") as HTMLElement | null)?.dataset
-                .template ?? "cvpr-portrait",
+              (document.querySelector("[data-template]") as HTMLElement | null)?.dataset.template ??
+              "cvpr-portrait",
           }),
         })
         if (!projectRes.ok) throw new Error("Project creation failed")

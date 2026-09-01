@@ -188,13 +188,7 @@ export interface LocalizedIssue {
   severity: "minor" | "major" | "blocking"
 }
 
-export type AgentStage =
-  | "reading"
-  | "extracting"
-  | "planning"
-  | "rendering"
-  | "critique"
-  | "done"
+export type AgentStage = "reading" | "extracting" | "planning" | "rendering" | "critique" | "done"
 
 export interface AgentEvent {
   id: string
@@ -254,13 +248,7 @@ export interface ExamplePoster {
   featured: boolean
 }
 
-export type PosterField =
-  | "ai-ml"
-  | "biomedicine"
-  | "climate"
-  | "economics"
-  | "physics"
-  | "other"
+export type PosterField = "ai-ml" | "biomedicine" | "climate" | "economics" | "physics" | "other"
 
 export interface UseCase {
   id: string

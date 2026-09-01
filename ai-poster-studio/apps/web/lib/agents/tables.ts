@@ -7,9 +7,9 @@
 
 import "server-only"
 import { execFile } from "node:child_process"
-import { promisify } from "node:util"
-import path from "node:path"
 import fs from "node:fs"
+import path from "node:path"
+import { promisify } from "node:util"
 
 import type { ContentBrief } from "./ingest"
 
@@ -36,13 +36,13 @@ export async function extractTables(pdfPath: string): Promise<ExtractedTable[]> 
       maxBuffer: 10 * 1024 * 1024,
       timeout: 30_000,
     })
-    const tables = JSON.parse(stdout) as Array<Omit<ExtractedTable, "columnCount"> & { column_count?: number }>
+    const tables = JSON.parse(stdout) as Array<
+      Omit<ExtractedTable, "columnCount"> & { column_count?: number }
+    >
     return tables
       .filter(
         (t) =>
-          t.headers.length >= 2 &&
-          t.rows.length >= 1 &&
-          (t.column_count ?? t.headers.length) >= 2,
+          t.headers.length >= 2 && t.rows.length >= 1 && (t.column_count ?? t.headers.length) >= 2,
       )
       .map((t) => ({ ...t, columnCount: t.column_count ?? t.headers.length }))
   } catch (err) {

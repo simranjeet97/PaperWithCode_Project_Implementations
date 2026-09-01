@@ -64,8 +64,8 @@ export function TryArxivButton({
           paperFileUrl: fileUrl,
           paperArxivId: arxivId,
           template:
-            (document.querySelector("[data-template]") as HTMLElement | null)?.dataset
-              .template ?? "cvpr-portrait",
+            (document.querySelector("[data-template]") as HTMLElement | null)?.dataset.template ??
+            "cvpr-portrait",
         }),
       })
       if (!projectRes.ok) throw new Error("Could not create project")

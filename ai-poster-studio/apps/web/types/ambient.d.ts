@@ -36,7 +36,11 @@ declare module "pdfjs-dist" {
       numPages: number
       getPage: (n: number) => Promise<{
         getViewport: (opts: { scale: number }) => { width: number; height: number }
-        render: (opts: { canvasContext: CanvasRenderingContext2D; viewport: unknown; canvas: HTMLCanvasElement }) => { promise: Promise<void> }
+        render: (opts: {
+          canvasContext: CanvasRenderingContext2D
+          viewport: unknown
+          canvas: HTMLCanvasElement
+        }) => { promise: Promise<void> }
       }>
     }>
   }

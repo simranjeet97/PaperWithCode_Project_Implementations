@@ -103,14 +103,22 @@ async function parsePdfBytes(bytes: Uint8Array): Promise<ContentBrief> {
   let tables: NonNullable<ContentBrief["tables"]> = []
   try {
     const { extractTables, tablesToBrief } = await import("./tables")
-    const tmpPath = path.join(process.cwd(), ".data", "tmp", `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.pdf`)
+    const tmpPath = path.join(
+      process.cwd(),
+      ".data",
+      "tmp",
+      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.pdf`,
+    )
     await fs.mkdir(path.dirname(tmpPath), { recursive: true })
     await fs.writeFile(tmpPath, bytes)
     const extracted = await extractTables(tmpPath)
     tables = tablesToBrief(extracted)
     await fs.unlink(tmpPath).catch(() => {})
   } catch (err) {
-    console.warn("Real table extraction failed (continuing with captions only):", err instanceof Error ? err.message : err)
+    console.warn(
+      "Real table extraction failed (continuing with captions only):",
+      err instanceof Error ? err.message : err,
+    )
   }
 
   // Split by pages — pdf-parse includes form-feed \f between pages
