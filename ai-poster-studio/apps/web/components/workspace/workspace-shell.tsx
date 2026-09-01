@@ -50,6 +50,7 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
           drafts: Draft[]
           status: string
           posterHtml: string | null
+          template?: string
         }
         const projectData = (await projectRes.json()) as {
           project: { paperFileUrl: string }
@@ -60,6 +61,7 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
         setStatus(data.status)
         setPosterHtml(data.posterHtml)
         setPaperFileUrl(projectData.project.paperFileUrl)
+        if (data.template) setTemplateId(data.template)
         if (data.events.length > 0) {
           const last = data.events[data.events.length - 1]
           if (last) setActiveStage(last.stage)
@@ -85,31 +87,48 @@ export function WorkspaceShell({ projectId }: { projectId: string }) {
     }
   }, [projectId, currentDraft])
 
+  const template = getTemplate(templateId)
+  const orientation = template.pageSize.width >= template.pageSize.height ? "landscape" : "portrait"
+
   return (
-    <div className="grid h-full grid-cols-[320px_380px_1fr] divide-x divide-ws-hairline bg-ws-canvas">
-      <PdfViewerPanel paperFileUrl={paperFileUrl} />
-      <AgentActivityPanel
-        events={events}
-        drafts={drafts.map((d) => ({
-          ...d,
-          previewColor: PALETTE[d.turnNumber as 1 | 2 | 3] ?? "bg-timeline-rendering/30",
-        }))}
-        currentDraft={currentDraft}
-        onSelectDraft={setCurrentDraft}
-        activeStage={activeStage}
-        startedAt={startedAt.current}
-        status={status}
-        projectId={projectId}
-      />
-      <PosterRenderPanel
-        drafts={drafts.map((d) => ({
-          ...d,
-          previewColor: PALETTE[d.turnNumber as 1 | 2 | 3] ?? "bg-timeline-rendering/30",
-        }))}
-        currentDraft={currentDraft}
-        posterHtml={posterHtml}
-        projectId={projectId}
-      />
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-ws-hairline bg-ws-panel-2 px-4 py-2 text-xs">
+        <div className="flex items-center gap-2 text-muted">
+          <span className="font-medium text-fg-2">{template.shortName}</span>
+          <span aria-hidden>·</span>
+          <span>{orientation}</span>
+          <span aria-hidden>·</span>
+          <span className="font-mono">
+            {template.pageSize.width}×{template.pageSize.height}mm
+          </span>
+        </div>
+        <span className="font-mono text-muted">status: {status}</span>
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-[320px_380px_1fr] divide-x divide-ws-hairline bg-ws-canvas">
+        <PdfViewerPanel paperFileUrl={paperFileUrl} />
+        <AgentActivityPanel
+          events={events}
+          drafts={drafts.map((d) => ({
+            ...d,
+            previewColor: PALETTE[d.turnNumber as 1 | 2 | 3] ?? "bg-timeline-rendering/30",
+          }))}
+          currentDraft={currentDraft}
+          onSelectDraft={setCurrentDraft}
+          activeStage={activeStage}
+          startedAt={startedAt.current}
+          status={status}
+          projectId={projectId}
+        />
+        <PosterRenderPanel
+          drafts={drafts.map((d) => ({
+            ...d,
+            previewColor: PALETTE[d.turnNumber as 1 | 2 | 3] ?? "bg-timeline-rendering/30",
+          }))}
+          currentDraft={currentDraft}
+          posterHtml={posterHtml}
+          projectId={projectId}
+        />
+      </div>
     </div>
   )
 }
