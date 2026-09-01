@@ -58,10 +58,8 @@ export function PdfViewerPanel({ paperFileUrl }: PdfViewerPanelProps) {
     async function loadPdf() {
       try {
         const pdfjsLib = await import("pdfjs-dist")
-        // Use the bundled worker via the special URL pattern Next.js understands
-        // For client-side, point to the worker hosted at the public folder
-        const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+        // Worker served from /public (copied from pdfjs-dist/build in scripts/)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
         const loadingTask = pdfjsLib.getDocument(paperFileUrl ?? "")
         const doc = await loadingTask.promise

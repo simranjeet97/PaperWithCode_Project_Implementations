@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "postinstall": "node -e \"require('node:fs').copyFileSync(require.resolve('pdfjs-dist/build/pdf.worker.min.mjs'), 'public/pdf.worker.min.mjs')\"",
     "start": "next start",
     "lint": "biome check app components lib",
     "lint:fix": "biome check --write app components lib",
