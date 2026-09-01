@@ -37,6 +37,7 @@ export interface Project {
   posterPlan: PosterPlan | null
   drafts: PosterDraft[]
   finalDraftId: string | null
+  panelOverrides?: Record<string, string> | null
   createdAt: string
   updatedAt: string
   completedAt: string | null
