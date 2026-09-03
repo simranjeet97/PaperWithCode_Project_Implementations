@@ -25,3 +25,7 @@ test-results
 .idea
 *.tsbuildinfo
 next-env.d.ts
+
+# AI Poster Studio local runtime data
+ai-poster-studio/apps/web/.data/
+ai-poster-studio/apps/worker/.data/
